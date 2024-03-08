@@ -136,13 +136,13 @@ def create_report(options, scan_id):
             + "</p>"
             + log_data.json_parse_js
         )
-        with open(report_path_filename, "w", encoding="utf-8") as save:
-            save.write(html_table_content + "\n")
-            save.close()
+        with open(report_path_filename, "w", encoding="utf-8") as report_file:
+            report_file.write(html_table_content + "\n")
+            report_file.close()
     elif len(report_path_filename) >= 5 and report_path_filename[-5:] == ".json":
-        with open(report_path_filename, "w", encoding="utf-8") as save:
-            save.write(str(json.dumps(all_scan_logs)) + "\n")
-            save.close()
+        with open(report_path_filename, "w", encoding="utf-8") as report_file:
+            report_file.write(str(json.dumps(all_scan_logs)) + "\n")
+            report_file.close()
     elif len(report_path_filename) >= 5 and report_path_filename[-4:] == ".csv":
         keys = all_scan_logs[0].keys()
         with open(report_path_filename, "a") as csvfile:
@@ -154,9 +154,9 @@ def create_report(options, scan_id):
             csvfile.close()
 
     else:
-        with open(report_path_filename, "wb") as save:
-            save.write(build_text_table(all_scan_logs))
-            save.close()
+        with open(report_path_filename, "w", encoding="utf-8") as report_file:
+            report_file.write(build_text_table(all_scan_logs))
+
     log.write(build_text_table(all_scan_logs))
     submit_report_to_db(
         {
