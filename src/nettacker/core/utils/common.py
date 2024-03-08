@@ -16,7 +16,8 @@ from nettacker import logger
 log = logger.get_logger()
 
 
-def replace_dependent_response(log, result):
+def replace_dependent_response(log, response_dependent):
+    """The `response_dependent` is needed for `eval` below."""
     if str(log):
         key_name = re.findall(re.compile("response_dependent\\['\\S+\\]"), log)
         for i in key_name:
