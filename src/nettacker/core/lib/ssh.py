@@ -1,7 +1,6 @@
 import logging
 
 from paramiko import SSHClient, AutoAddPolicy
-from paramiko.ssh_exception import NoValidConnectionsError, SSHException
 
 from nettacker.core.lib.base import BaseEngine, BaseLibrary
 

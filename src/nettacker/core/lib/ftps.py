@@ -1,11 +1,11 @@
 import ftplib
 
-from nettacker.core.lib.ftp import FTPEngine, FTPLibrary
+from nettacker.core.lib.ftp import FtpEngine, FtpLibrary
 
 
-class FtpsLibrary(FTPLibrary):
+class FtpsLibrary(FtpLibrary):
     client = ftplib.FTP_TLS
 
 
-class FtpsEngine(FTPEngine):
+class FtpsEngine(FtpEngine):
     library = FtpsLibrary

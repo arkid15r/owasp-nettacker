@@ -74,32 +74,24 @@ class Nettacker(ArgParser):
                 os.mkdir(Config.path.tmp_dir)
                 os.mkdir(Config.path.results_dir)
             except Exception:
-                die_failure(
-                    "cannot access the directory {0}".format(Config.path.home_dir)
-                )
+                die_failure("cannot access the directory {0}".format(Config.path.home_dir))
         if not os.path.exists(Config.path.tmp_dir):
             try:
                 os.mkdir(Config.path.tmp_dir)
             except Exception:
-                die_failure(
-                    "cannot access the directory {0}".format(Config.path.tmp_dir)
-                )
+                die_failure("cannot access the directory {0}".format(Config.path.tmp_dir))
         if not os.path.exists(Config.path.results_dir):
             try:
                 os.mkdir(Config.path.results_dir)
             except Exception:
-                die_failure(
-                    "cannot access the directory {0}".format(Config.path.results_dir)
-                )
+                die_failure("cannot access the directory {0}".format(Config.path.results_dir))
 
         if Config.db.engine == "sqlite":
             try:
                 if not os.path.isfile(Config.path.database_file):
                     sqlite_create_tables()
             except Exception:
-                die_failure(
-                    "cannot access the directory {0}".format(Config.path.home_dir)
-                )
+                die_failure("cannot access the directory {0}".format(Config.path.home_dir))
         elif Config.db.engine == "mysql":
             try:
                 mysql_create_database()
@@ -162,9 +154,9 @@ class Nettacker(ArgParser):
 
             for target in copy.deepcopy(self.arguments.targets):
                 for row in find_events(target, "subdomain_scan", scan_id):
-                    for sub_domain in json.loads(row.json_event)["response"][
-                        "conditions_results"
-                    ]["content"]:
+                    for sub_domain in json.loads(row.json_event)["response"]["conditions_results"][
+                        "content"
+                    ]:
                         if sub_domain not in self.arguments.targets:
                             self.arguments.targets.append(sub_domain)
         # icmp_scan
@@ -176,9 +168,7 @@ class Nettacker(ArgParser):
                 self.arguments.selected_modules = selected_modules
                 if "icmp_scan" in self.arguments.selected_modules:
                     self.arguments.selected_modules.remove("icmp_scan")
-                self.arguments.targets = self.filter_target_by_event(
-                    targets, scan_id, "icmp_scan"
-                )
+                self.arguments.targets = self.filter_target_by_event(targets, scan_id, "icmp_scan")
             else:
                 log.warn(_("icmp_need_root_access"))
                 if "icmp_scan" in self.arguments.selected_modules:
@@ -192,9 +182,7 @@ class Nettacker(ArgParser):
             self.arguments.selected_modules = selected_modules
             if "port_scan" in self.arguments.selected_modules:
                 self.arguments.selected_modules.remove("port_scan")
-            self.arguments.targets = self.filter_target_by_event(
-                targets, scan_id, "port_scan"
-            )
+            self.arguments.targets = self.filter_target_by_event(targets, scan_id, "port_scan")
             self.arguments.skip_service_discovery = False
 
         return list(set(self.arguments.targets))
@@ -260,9 +248,7 @@ class Nettacker(ArgParser):
         for _i in range(target_groups.count([])):
             target_groups.remove([])
 
-        log.info(
-            _("start_multi_process").format(number_of_total_targets, len(target_groups))
-        )
+        log.info(_("start_multi_process").format(number_of_total_targets, len(target_groups)))
         active_processes = []
         for t_id, target_groups in enumerate(target_groups):
             process = multiprocess.Process(
