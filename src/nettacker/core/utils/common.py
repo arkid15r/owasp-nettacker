@@ -7,6 +7,8 @@ import math
 import multiprocessing
 import random
 import re
+import socket
+import ssl
 import string
 import sys
 import time
@@ -325,39 +327,39 @@ def sort_dictionary(dictionary):
         sorted_dictionary["..."] = {}
     return sorted_dictionary
 
+
 def is_weak_hash_algo(algo):
     algo = algo.lower()
-    unsafe_algos = ["md2", "md4", "md5", "sha1"]
-    for unsafe_algo in unsafe_algos:
-        if( unsafe_algo in algo ): return True
+    for unsafe_algo in ("md2", "md4", "md5", "sha1"):
+        if unsafe_algo in algo:
+            return True
     return False
 
+
 def check_ssl_version(ssl_ver):
-    if( ssl_ver == "TLSv1.3" or ssl_ver == "TLSv1.2" ):
-        return False
-    return True
+    return ssl_ver not in {"TLSv1.2", "TLSv1.3"}
+
 
 def check_cipher_suite(host, port, timeout):
-    import socket
-    import ssl
-    unsecure_ciphers = ['AES128-GCM-SHA256',
-                        'AES256-GCM-SHA384',
-                        'AES128-SHA',
-                        'AES256-SHA',
-                        'DES-CBC3-SHA']
+    unsecure_ciphers = (
+        "AES128-GCM-SHA256",
+        "AES256-GCM-SHA384",
+        "AES128-SHA",
+        "AES256-SHA",
+        "DES-CBC3-SHA",
+    )
     bad_cipher_suite = False
     for ciphers in unsecure_ciphers:
         try:
             socket_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             socket_connection.settimeout(timeout)
             socket_connection.connect((host, port))
-            ssl_flag = False
         except ConnectionRefusedError:
             continue
         try:
-            socket_connection = ssl.wrap_socket(socket_connection, ciphers = ciphers)
+            socket_connection = ssl.wrap_socket(socket_connection, ciphers=ciphers)
             bad_cipher_suite = True
             break
-        except:
+        except Exception:
             continue
     return bad_cipher_suite
