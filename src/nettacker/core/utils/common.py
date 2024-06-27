@@ -336,30 +336,24 @@ def is_weak_hash_algo(algo):
     return False
 
 
-def check_ssl_version(ssl_ver):
+def is_weak_ssl_version(ssl_ver):
     return ssl_ver not in {"TLSv1.2", "TLSv1.3"}
 
 
-def check_cipher_suite(host, port, timeout):
-    unsecure_ciphers = (
-        "AES128-GCM-SHA256",
-        "AES256-GCM-SHA384",
-        "AES128-SHA",
-        "AES256-SHA",
-        "DES-CBC3-SHA",
-    )
-    bad_cipher_suite = False
-    for ciphers in unsecure_ciphers:
-        try:
-            socket_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            socket_connection.settimeout(timeout)
-            socket_connection.connect((host, port))
-        except ConnectionRefusedError:
-            continue
-        try:
-            socket_connection = ssl.wrap_socket(socket_connection, ciphers=ciphers)
-            bad_cipher_suite = True
-            break
-        except Exception:
-            continue
-    return bad_cipher_suite
+def is_weak_cipher_suite(host, port, timeout):
+    unsecure_ciphers = "EXP-ADH-DES-CBC-SHA:ADH-3DES-EDE-CBC-SHA:ADH-AES128-CBC-SHA:ADH-AES128-CBC-SHA256:ADH-AES128-GCM-SHA256:ADH-AES256-CBC-SHA:ADH-AES256-CBC-SHA256:ADH-AES256-GCM-SHA384:ADH-ARIA128-CBC-SHA256:ADH-ARIA128-GCM-SHA256:ADH-ARIA256-CBC-SHA384:ADH-ARIA256-GCM-SHA384:ADH-CAMELLIA128-CBC-SHA:ADH-CAMELLIA128-CBC-SHA256"
+    try:
+        socket_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        socket_connection.settimeout(timeout)
+        socket_connection.connect((host, port))
+    except ConnectionRefusedError:
+        return None
+    try:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        ctx.set_ciphers(unsecure_ciphers)
+        socket_connection = ctx.wrap_socket(socket_connection)
+        return True
+    except ssl.SSLError:
+        return False

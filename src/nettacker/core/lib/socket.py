@@ -15,7 +15,7 @@ from core.utils.common import is_weak_hash_algo, reverse_and_regex_condition
 from OpenSSL import crypto
 
 from nettacker.core.lib.base import BaseEngine, BaseLibrary
-from nettacker.core.utils.common import check_ssl_version, check_cipher_suite
+from nettacker.core.utils.common import is_weak_ssl_version, is_weak_cipher_suite
 
 log = logging.getLogger(__name__)
 
@@ -117,18 +117,18 @@ class SocketLibrary(BaseLibrary):
             return None
 
         socket_connection, ssl_flag = tcp_socket
-        bad_cipher_suite = False
+        weak_cipher_suite = False
         peer_name = socket_connection.getpeername()
 
         if ssl_flag:
             ssl_ver = socket_connection.version()
-            bad_version = check_ssl_version(ssl_ver)
+            weak_version = is_weak_ssl_version(ssl_ver)
             if ssl_ver != "TLSv1.3":
-                bad_cipher_suite = check_cipher_suite(host, port, timeout)
+                weak_cipher_suite = is_weak_cipher_suite(host, port, timeout)
             return {
                 "ssl_version": ssl_ver,
-                "bad_version": bad_version,
-                "bad_cipher_suite": bad_cipher_suite,
+                "weak_version": weak_version,
+                "weak_cipher_suite": weak_cipher_suite,
                 "ssl_flag": ssl_flag,
                 "peer_name": peer_name,
                 "service": socket.getservbyport(int(port)),
@@ -316,7 +316,7 @@ class SocketEngine(BaseEngine):
             return response
 
         if sub_step["method"] in {"ssl_certificate_scan", "ssl_version_scan"}:
-            if response:
+            if response["ssl_flag"]:
                 for condition in conditions:
                     if (conditions[condition]["reverse"] and not response[condition]) or (
                         not conditions[condition]["reverse"] and response[condition]

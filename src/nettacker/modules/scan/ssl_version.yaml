@@ -28,7 +28,7 @@ payloads:
         response:
           condition_type: or
           conditions:
-            bad_cipher_suite:
+            weak_cipher_suite:
               reverse: false
-            bad_version:
+            weak_version:
               reverse: false

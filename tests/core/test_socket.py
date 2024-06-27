@@ -55,9 +55,9 @@ class TestSSLMethods(TestCase):
         socket_instance.connect.assert_called_with((HOST, PORT))
         mock_wrap.assert_called_with(socket_instance)
 
-    @patch("core.lib.socket.check_cipher_suite")
+    @patch("core.lib.socket.is_weak_cipher_suite")
     @patch("core.lib.socket.create_tcp_socket")
-    def test_ssl_version_scan(self, mock_connection, mock_cipher_check):
+    def test_ssl_version_scan_good(self, mock_connection, mock_cipher_check):
         library = SocketLibrary()
         HOST = "example.com"
         PORT = 80
@@ -70,23 +70,10 @@ class TestSSLMethods(TestCase):
             {
                 "ssl_flag": True,
                 "service": "http",
-                "bad_version": False,
+                "weak_version": False,
                 "ssl_version": "TLSv1.3",
-                "bad_cipher_suite": False,
                 "peer_name": "example.com",
-            },
-        )
-        mock_connection.return_value = (MockConnectionObject(HOST, "TLSv1.1"), True)
-        mock_cipher_check.return_value = True
-        self.assertEqual(
-            library.ssl_version_scan(HOST, PORT, TIMEOUT),
-            {
-                "ssl_flag": True,
-                "service": "http",
-                "bad_version": True,
-                "bad_cipher_suite": True,
-                "ssl_version": "TLSv1.1",
-                "peer_name": "example.com",
+                "weak_cipher_suite": False,
             },
         )
 
@@ -100,10 +87,32 @@ class TestSSLMethods(TestCase):
             },
         )
 
+    @patch("core.lib.socket.is_weak_cipher_suite")
+    @patch("core.lib.socket.create_tcp_socket")
+    def test_ssl_version_scan_bad(self, mock_connection, mock_cipher_check):
+        library = SocketLibrary()
+        HOST = "example.com"
+        PORT = 80
+        TIMEOUT = 60
+
+        mock_connection.return_value = (MockConnectionObject(HOST, "TLSv1.1"), True)
+        mock_cipher_check.return_value = True
+        self.assertEqual(
+            library.ssl_version_scan(HOST, PORT, TIMEOUT),
+            {
+                "ssl_flag": True,
+                "service": "http",
+                "weak_version": True,
+                "ssl_version": "TLSv1.1",
+                "weak_cipher_suite": True,
+                "peer_name": "example.com",
+            },
+        )
+
     @patch("core.lib.socket.create_tcp_socket")
     @patch("core.lib.socket.crypto.load_certificate")
     @patch("core.lib.socket.ssl.get_server_certificate")
-    def test_ssl_certificate_scan(self, mock_certificate, mock_x509, mock_connection):
+    def test_ssl_certificate_scan_good(self, mock_certificate, mock_x509, mock_connection):
         library = SocketLibrary()
         HOST = "example.com"
         PORT = 80
@@ -140,6 +149,15 @@ class TestSSLMethods(TestCase):
             },
         )
         mock_certificate.assert_called_with((HOST, PORT))
+
+    @patch("core.lib.socket.create_tcp_socket")
+    @patch("core.lib.socket.crypto.load_certificate")
+    @patch("core.lib.socket.ssl.get_server_certificate")
+    def test_ssl_certificate_scan_bad(self, mock_certificate, mock_x509, mock_connection):
+        library = SocketLibrary()
+        HOST = "example.com"
+        PORT = 80
+        TIMEOUT = 60
 
         mock_connection.return_value = (MockConnectionObject(HOST, "TLSv1.3"), True)
         mock_x509.return_value = Mockx509Object(
