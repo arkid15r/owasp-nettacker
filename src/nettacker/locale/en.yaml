@@ -120,4 +120,4 @@ invalid_scan_id: your scan id is not valid!
 compare_scans: compare current scan to old scans using the unique scan_id
 compare_report_path_filename: the filepath to store the compare_scan report
 no_scan_to_compare: the scan_id to be compared not found
-compare_report_saved: "report saved in {0} and database"
+compare_report_saved: "compare results saved in {0}"

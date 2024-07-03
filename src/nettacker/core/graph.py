@@ -147,7 +147,8 @@ def create_report(options, scan_id):
         keys = all_scan_logs[0].keys()
         with open(report_path_filename, "a") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=keys)
-            writer.writeheader()
+            if csvfile.tell() == 0:
+                writer.writeheader()
             for log_list in all_scan_logs:
                 dict_data = {key: value for key, value in log_list.items() if key in keys}
                 writer.writerow(dict_data)
@@ -168,6 +169,20 @@ def create_report(options, scan_id):
 
     log.info(_("file_saved").format(report_path_filename))
     return True
+
+
+def create_compare_text_table(results):
+    _table = texttable.Texttable()
+    table_headers = list(results.keys())
+    _table.add_rows([table_headers])
+    _table.add_rows(
+        [
+            table_headers,
+            [results[col] for col in table_headers],
+        ]
+    )
+    _table.set_cols_width([len(i) for i in table_headers])
+    return _table.draw() + "\n\n"
 
 
 def create_compare_report(options, scan_id):
@@ -207,7 +222,7 @@ def create_compare_report(options, scan_id):
     curr_modules_ports = set(get_modules_ports(item) for item in scan_log_curr)
     comp_modules_ports = set(get_modules_ports(item) for item in scan_logs_comp)
 
-    final_dict = {
+    compare_results = {
         "curr_scan_details": (scan_id, scan_log_curr[0]["date"]),
         "comp_scan_details": (comp_id, scan_logs_comp[0]["date"]),
         "curr_target_set": tuple(curr_target_set),
@@ -220,7 +235,20 @@ def create_compare_report(options, scan_id):
     compare_report_path_filename = options.compare_report_path_filename
     if len(compare_report_path_filename) >= 5 and compare_report_path_filename[-5:] == ".json":
         with open(compare_report_path_filename, "w", encoding="utf-8") as compare_report:
-            compare_report.write(str(json.dumps(final_dict)) + "\n")
+            compare_report.write(str(json.dumps(compare_results)) + "\n")
             compare_report.close()
+    elif len(compare_report_path_filename) >= 5 and compare_report_path_filename[-4:] == ".csv":
+        keys = compare_results.keys()
+        with open(compare_report_path_filename, "a") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=keys)
+            if csvfile.tell() == 0:
+                writer.writeheader()
+            writer.writerow(compare_results)
+            csvfile.close()
+    else:
+        with open(compare_report_path_filename, "w", encoding="utf-8") as compare_report:
+            compare_report.write(create_compare_text_table(compare_results))
+
+    log.write(create_compare_text_table(compare_results))
     log.info(_("compare_report_saved").format(compare_report_path_filename))
     return True

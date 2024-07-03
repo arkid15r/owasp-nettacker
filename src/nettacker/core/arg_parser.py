@@ -667,7 +667,7 @@ class ArgParser(ArgumentParser):
                 die_failure(_("error_passwords").format(options.passwords_list))
         # Check output file
         try:
-            temp_file = open(options.report_path_filename, "w")
+            temp_file = open(options.report_path_filename, "a")
             temp_file.close()
         except Exception:
             die_failure(_("file_write_error").format(options.report_path_filename))
