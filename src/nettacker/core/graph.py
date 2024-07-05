@@ -42,6 +42,21 @@ def build_graph(graph_name, events):
     return start(events)
 
 
+def build_compare_report(compare_results):
+    """ """
+    log.info(_("build_compare_report"))
+    try:
+        build_report = getattr(
+            importlib.import_module("nettacker.lib.compare_report.engine"),
+            "build_report",
+        )
+    except ModuleNotFoundError:
+        die_failure(_("graph_module_unavailable").format("compare_report"))
+
+    log.info(_("finish_build_report"))
+    return build_report(compare_results)
+
+
 def build_text_table(events):
     """
     value['date'], value["target"], value['module_name'], value['scan_id'],
@@ -233,7 +248,14 @@ def create_compare_report(options, scan_id):
         "old_targets_not_detected": tuple(comp_modules_ports - curr_modules_ports),
     }
     compare_report_path_filename = options.compare_report_path_filename
-    if len(compare_report_path_filename) >= 5 and compare_report_path_filename[-5:] == ".json":
+    if (
+        len(compare_report_path_filename) >= 5 and compare_report_path_filename[-5:] == ".html"
+    ) or (len(compare_report_path_filename) >= 4 and compare_report_path_filename[-4:] == ".htm"):
+        html_report = build_compare_report(compare_results)
+        with open(compare_report_path_filename, "w", encoding="utf-8") as compare_report:
+            compare_report.write(html_report + "\n")
+            compare_report.close()
+    elif len(compare_report_path_filename) >= 5 and compare_report_path_filename[-5:] == ".json":
         with open(compare_report_path_filename, "w", encoding="utf-8") as compare_report:
             compare_report.write(str(json.dumps(compare_results)) + "\n")
             compare_report.close()
