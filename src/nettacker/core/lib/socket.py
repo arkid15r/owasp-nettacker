@@ -316,7 +316,7 @@ class SocketEngine(BaseEngine):
             return response
 
         if sub_step["method"] in {"ssl_certificate_scan", "ssl_version_scan"}:
-            if response["ssl_flag"]:
+            if response and response["ssl_flag"]:
                 for condition in conditions:
                     if (conditions[condition]["reverse"] and not response[condition]) or (
                         not conditions[condition]["reverse"] and response[condition]
