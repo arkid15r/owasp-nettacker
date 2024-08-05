@@ -16,7 +16,7 @@
 
         body {
             font-family: 'Roboto', sans-serif;
-            font-size: 14px;
+            font-size: 16px;
             line-height: 1.6;
             color: var(--text-color);
             background-color: var(--background-color);
@@ -34,7 +34,7 @@
             font-family: 'Montserrat', sans-serif;
             color: var(--secondary-color);
             text-align: center;
-            font-size: 24px;
+            font-size: 26px;
             margin-bottom: 20px;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -45,7 +45,7 @@
         h2 {
             font-family: 'Montserrat', sans-serif;
             color: var(--primary-color);
-            font-size: 18px;
+            font-size: 20px;
             margin-top: 20px;
             margin-bottom: 10px;
         }
@@ -76,7 +76,7 @@
 
         .value {
             margin-left: 15px;
-            font-size: 13px;
+            font-size: 15px;
         }
 
         .list {
@@ -85,9 +85,17 @@
             margin: 0;
         }
 
+        #list_yellow {
+            background-color: yellow;
+        }
+
+        #list_red {
+            background-color: red;
+        }
+
         .list-item {
             margin-bottom: 5px;
-            font-size: 13px;
+            font-size: 15px;
         }
 
         @media (max-width: 600px) {
@@ -96,11 +104,11 @@
             }
 
             h1 {
-                font-size: 20px;
+                font-size: 22px;
             }
 
             h2 {
-                font-size: 16px;
+                font-size: 18px;
             }
 
             .section {
@@ -112,7 +120,7 @@
             }
 
             .label, .value, .list-item {
-                font-size: 12px;
+                font-size: 14px;
             }
         }
     </style>
@@ -190,13 +198,13 @@
                     <div class="item">
                         <div class="label">New Targets Discovered:</div>
                         <ul class="list">
-                            ${data.new_targets_discovered.map(target => `<li class="list-item">Target: ${target[0]}, Scan Type: ${target[1]}, Port: ${target[2]}</li>`).join('')}
+                            ${data.new_targets_discovered.map(target => `<li class="list-item" id="list_yellow">Target: ${target[0]}, Scan Type: ${target[1]}, Port: ${target[2]}</li>`).join('')}
                         </ul>
                     </div>
                     <div class="item">
                         <div class="label">Old Targets Not Detected:</div>
-                        <ul class="list">
-                            ${data.old_targets_not_detected.map(target => `<li class="list-item">Target: ${target[0]}, Scan Type: ${target[1]}, Port: ${target[2]}</li>`).join('')}
+                        <ul class="list" id="list_red">
+                            ${data.old_targets_not_detected.map(target => `<li class="list-item" id="list_red">Target: ${target[0]}, Scan Type: ${target[1]}, Port: ${target[2]}</li>`).join('')}
                         </ul>
                     </div>
                 </div>`;

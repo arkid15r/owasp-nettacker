@@ -11,7 +11,7 @@ def build_report(compare_result):
         compare_result: dict with result of the compare
 
     Returns:
-        a graph in HTML
+        Compare report in HTML
     """
     data = (
         open(Config.path.web_static_dir / "report/compare_report.html")

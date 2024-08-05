@@ -43,7 +43,15 @@ def build_graph(graph_name, events):
 
 
 def build_compare_report(compare_results):
-    """ """
+    """
+    build the compare report
+
+    Args:
+        compare_results: Final result of the comparision(dict)
+
+    Returns:
+        report in html format
+    """
     log.info(_("build_compare_report"))
     try:
         build_report = getattr(
