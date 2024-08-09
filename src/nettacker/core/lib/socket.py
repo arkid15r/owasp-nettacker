@@ -11,11 +11,15 @@ import struct
 import time
 from datetime import datetime, timezone
 
-from core.utils.common import is_weak_hash_algo, reverse_and_regex_condition
+from core.utils.common import (
+    reverse_and_regex_condition,
+    is_weak_hash_algo,
+    is_weak_ssl_version,
+    is_weak_cipher_suite,
+)
 from OpenSSL import crypto
 
 from nettacker.core.lib.base import BaseEngine, BaseLibrary
-from nettacker.core.utils.common import is_weak_ssl_version, is_weak_cipher_suite
 
 log = logging.getLogger(__name__)
 
@@ -94,6 +98,9 @@ class SocketLibrary(BaseLibrary):
             cert = ssl.get_server_certificate((host, port))
             x509 = crypto.load_certificate(crypto.FILETYPE_PEM, cert)
             weak_signing_algo = is_weak_hash_algo(str(x509.get_signature_algorithm()))
+            cert_activation = datetime.strptime(
+                x509.get_notBefore().decode("utf-8"), "%Y%m%d%H%M%S%z"
+            )
             cert_expires = datetime.strptime(x509.get_notAfter().decode("utf-8"), "%Y%m%d%H%M%S%z")
 
             return {
@@ -102,6 +109,7 @@ class SocketLibrary(BaseLibrary):
                 "weak_signing_algo": weak_signing_algo,
                 "ssl_flag": ssl_flag,
                 "peer_name": peer_name,
+                "not_activated": (cert_activation - datetime.now(timezone.utc)).days > 0,
                 "expiring_soon": (cert_expires - datetime.now(timezone.utc)).days < 30,
                 "service": socket.getservbyport(int(port)),
             }
@@ -117,14 +125,14 @@ class SocketLibrary(BaseLibrary):
             return None
 
         socket_connection, ssl_flag = tcp_socket
-        weak_cipher_suite = False
         peer_name = socket_connection.getpeername()
 
         if ssl_flag:
-            ssl_ver = socket_connection.version()
-            weak_version = is_weak_ssl_version(ssl_ver)
-            if ssl_ver != "TLSv1.3":
-                weak_cipher_suite = is_weak_cipher_suite(host, port, timeout)
+            ssl_ver, weak_version = is_weak_ssl_version(host, port, timeout)
+            weak_cipher_suite = (
+                False if ssl_ver == "TLSv1.3" else is_weak_cipher_suite(host, port, timeout)
+            )
+
             return {
                 "ssl_version": ssl_ver,
                 "weak_version": weak_version,

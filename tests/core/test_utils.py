@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from core.utils import common as utils
 
-from tests.common import TestCase
+from tests.common import TestCase, MockConnectionObject
 
 
 class TestUtils(TestCase):
@@ -59,10 +59,33 @@ class TestUtils(TestCase):
             self.assertTrue(utils.is_weak_hash_algo(algo))
         self.assertFalse(utils.is_weak_hash_algo("test_aglo"))
 
-    def test_is_weak_ssl_version(self):
-        for ver in {"TLSv1.2", "TLSv1.3"}:
-            self.assertFalse(utils.is_weak_ssl_version(ver))
-        self.assertTrue(utils.is_weak_ssl_version("test_version"))
+    @patch("socket.socket")
+    @patch("ssl.SSLContext")
+    def test_is_weak_ssl_version(self, mock_context, mock_socket):
+        HOST = "example.com"
+        PORT = 80
+        TIMEOUT = 60
+
+        socket_instance = mock_socket.return_value
+        context_instance = mock_context.return_value
+
+        context_instance.wrap_socket.return_value = MockConnectionObject(HOST, "TLSv1.3")
+        self.assertEqual(utils.is_weak_ssl_version(HOST, PORT, TIMEOUT), ("TLSv1.3", False))
+
+        context_instance.wrap_socket.return_value = MockConnectionObject(HOST, "TLSv1.1")
+        self.assertEqual(utils.is_weak_ssl_version(HOST, PORT, TIMEOUT), ("TLSv1.1", True))
+
+        context_instance.wrap_socket.side_effect = ssl.SSLError
+        self.assertEqual(utils.is_weak_ssl_version(HOST, PORT, TIMEOUT), (None, True))
+
+        context_instance.wrap_socket.side_effect = ConnectionRefusedError
+
+        self.assertEqual(utils.is_weak_ssl_version(HOST, PORT, TIMEOUT), (None, True))
+
+        socket_instance.settimeout.assert_called_with(TIMEOUT)
+        socket_instance.connect.assert_called_with((HOST, PORT))
+
+        context_instance.wrap_socket.assert_called_with(socket_instance, server_hostname=HOST)
 
     @patch("socket.socket")
     @patch("ssl.create_default_context")
@@ -75,7 +98,7 @@ class TestUtils(TestCase):
         context_instance = mock_context.return_value
 
         self.assertTrue(utils.is_weak_cipher_suite(HOST, PORT, TIMEOUT))
-        context_instance.wrap_socket.assert_called_with(socket_instance)
+        context_instance.wrap_socket.assert_called_with(socket_instance, server_hostname=HOST)
         socket_instance.settimeout.assert_called_with(TIMEOUT)
         socket_instance.connect.assert_called_with((HOST, PORT))
 

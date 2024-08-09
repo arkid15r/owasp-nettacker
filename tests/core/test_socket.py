@@ -2,43 +2,7 @@ from unittest.mock import patch
 
 from core.lib.socket import create_tcp_socket, SocketLibrary, SocketEngine
 
-from tests.common import TestCase
-
-
-class MockConnectionObject:
-    def __init__(self, peername, version=None):
-        self.Peername = peername
-        self.Version = version
-
-    def getpeername(self):
-        return self.Peername
-
-    def version(self):
-        return self.Version
-
-
-class Mockx509Object:
-    def __init__(self, issuer, subject, is_expired, expire_date, signing_algo):
-        self.issuer = issuer
-        self.subject = subject
-        self.expired = is_expired
-        self.expire_date = expire_date
-        self.signature_algorithm = signing_algo
-
-    def get_issuer(self):
-        return self.issuer
-
-    def get_subject(self):
-        return self.subject
-
-    def has_expired(self):
-        return self.expired
-
-    def get_notAfter(self):
-        return self.expire_date
-
-    def get_signature_algorithm(self):
-        return self.signature_algorithm
+from tests.common import TestCase, MockConnectionObject, Mockx509Object
 
 
 class Responses:
@@ -198,14 +162,16 @@ class TestSocketMethod(TestCase):
         mock_wrap.assert_called_with(socket_instance)
 
     @patch("core.lib.socket.is_weak_cipher_suite")
+    @patch("core.lib.socket.is_weak_ssl_version")
     @patch("core.lib.socket.create_tcp_socket")
-    def test_ssl_version_scan_good(self, mock_connection, mock_cipher_check):
+    def test_ssl_version_scan_good(self, mock_connection, mock_ssl_check, mock_cipher_check):
         library = SocketLibrary()
         HOST = "example.com"
         PORT = 80
         TIMEOUT = 60
 
         mock_connection.return_value = (MockConnectionObject(HOST, "TLSv1.3"), True)
+        mock_ssl_check.return_value = ("TLSv1.3", False)
         mock_cipher_check.return_value = False
         self.assertEqual(
             library.ssl_version_scan(HOST, PORT, TIMEOUT),
@@ -230,14 +196,16 @@ class TestSocketMethod(TestCase):
         )
 
     @patch("core.lib.socket.is_weak_cipher_suite")
+    @patch("core.lib.socket.is_weak_ssl_version")
     @patch("core.lib.socket.create_tcp_socket")
-    def test_ssl_version_scan_bad(self, mock_connection, mock_cipher_check):
+    def test_ssl_version_scan_bad(self, mock_connection, mock_ssl_check, mock_cipher_check):
         library = SocketLibrary()
         HOST = "example.com"
         PORT = 80
         TIMEOUT = 60
 
         mock_connection.return_value = (MockConnectionObject(HOST, "TLSv1.1"), True)
+        mock_ssl_check.return_value = ("TLSv1.1", True)
         mock_cipher_check.return_value = True
         self.assertEqual(
             library.ssl_version_scan(HOST, PORT, TIMEOUT),
@@ -266,7 +234,8 @@ class TestSocketMethod(TestCase):
             issuer="test_issuer",
             subject="test_subject",
             signing_algo="test_algo",
-            expire_date=b"20250619153045Z",
+            expire_date=b"20500619153045Z",
+            activation_date=b"20240619153045Z",
         )
         self.assertEqual(
             library.ssl_certificate_scan(HOST, PORT, TIMEOUT),
@@ -276,6 +245,7 @@ class TestSocketMethod(TestCase):
                 "service": "http",
                 "self_signed": False,
                 "expiring_soon": False,
+                "not_activated": False,
                 "weak_signing_algo": False,
                 "peer_name": "example.com",
             },
@@ -307,7 +277,8 @@ class TestSocketMethod(TestCase):
             issuer="test_issuer_subject",
             subject="test_issuer_subject",
             signing_algo="sha1",
-            expire_date=b"20240619153045Z",
+            expire_date=b"20500619153045Z",
+            activation_date=b"20500619153045Z",
         )
         self.assertEqual(
             library.ssl_certificate_scan(HOST, PORT, TIMEOUT),
@@ -316,7 +287,8 @@ class TestSocketMethod(TestCase):
                 "ssl_flag": True,
                 "service": "http",
                 "self_signed": True,
-                "expiring_soon": True,
+                "expiring_soon": False,
+                "not_activated": True,
                 "weak_signing_algo": True,
                 "peer_name": "example.com",
             },

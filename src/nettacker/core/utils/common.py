@@ -336,24 +336,88 @@ def is_weak_hash_algo(algo):
     return False
 
 
-def is_weak_ssl_version(ssl_ver):
-    return ssl_ver not in {"TLSv1.2", "TLSv1.3"}
+def is_weak_ssl_version(host, port, timeout):
+    def test_ssl_verison(host, port, timeout, ssl_version=None):
+        try:
+            context = ssl.SSLContext(ssl_version)
+            socket_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            socket_connection.settimeout(timeout)
+            socket_connection.connect((host, port))
+            socket_connection = context.wrap_socket(socket_connection, server_hostname=host)
+            return socket_connection.version()
+
+        except ssl.SSLError:
+            return False
+
+        except (socket.timeout, ConnectionRefusedError, ConnectionResetError):
+            return None
+
+    ssl_versions = (
+        ssl.PROTOCOL_TLS_CLIENT,  # TLS 1.3
+        ssl.PROTOCOL_TLSv1_2,
+        ssl.PROTOCOL_TLSv1_1,
+        ssl.PROTOCOL_TLSv1,
+    )
+    lowest_version = None
+
+    for ssl_version in ssl_versions:
+        version = test_ssl_verison(host, port, timeout, ssl_version=ssl_version)
+        if version:
+            lowest_version = version
+
+    return (lowest_version, lowest_version not in {"TLSv1.2", "TLSv1.3"})
 
 
 def is_weak_cipher_suite(host, port, timeout):
-    unsecure_ciphers = "EXP-ADH-DES-CBC-SHA:ADH-3DES-EDE-CBC-SHA:ADH-AES128-CBC-SHA:ADH-AES128-CBC-SHA256:ADH-AES128-GCM-SHA256:ADH-AES256-CBC-SHA:ADH-AES256-CBC-SHA256:ADH-AES256-GCM-SHA384:ADH-ARIA128-CBC-SHA256:ADH-ARIA128-GCM-SHA256:ADH-ARIA256-CBC-SHA384:ADH-ARIA256-GCM-SHA384:ADH-CAMELLIA128-CBC-SHA:ADH-CAMELLIA128-CBC-SHA256"
-    try:
-        socket_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        socket_connection.settimeout(timeout)
-        socket_connection.connect((host, port))
-    except ConnectionRefusedError:
-        return None
-    try:
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        ctx.set_ciphers(unsecure_ciphers)
-        socket_connection = ctx.wrap_socket(socket_connection)
-        return True
-    except ssl.SSLError:
-        return False
+    def test_single_cipher(host, port, cipher, timeout):
+        try:
+            context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+            context.set_ciphers(cipher)
+
+            socket_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            socket_connection.settimeout(timeout)
+            socket_connection.connect((host, port))
+            socket_connection = context.wrap_socket(socket_connection, server_hostname=host)
+            return True
+
+        except ssl.SSLError:
+            return False
+
+        except (socket.timeout, ConnectionRefusedError, ConnectionResetError):
+            return None
+
+    cipher_suites = [
+        "HIGH",  # OpenSSL cipher strings
+        "MEDIUM",
+        "LOW",
+        "EXP",
+        "eNULL",
+        "aNULL",
+        "RC4",
+        "DES",
+        "MD5",
+        "SHA1",
+        "DH",
+        "ADH",
+        "DHE",
+        "ECDH",
+        "ECDHE",
+        "TLSv1",
+        "TLSv1.1",
+        "TLSv1.2",
+        "TLSv1.3",
+    ]
+
+    supported_ciphers = []
+    for cipher in cipher_suites:
+        if test_single_cipher(host, port, cipher, timeout):
+            supported_ciphers.append(cipher)
+
+    weak_ciphers = ["LOW", "EXP", "eNULL", "aNULL", "RC4", "DES", "MD5", "DH", "ADH"]
+    for cipher in supported_ciphers:
+        if cipher in weak_ciphers:
+            return True
+
+    return False
