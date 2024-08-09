@@ -35,3 +35,5 @@ payloads:
               reverse: false
             expiring_soon:
               reverse: false
+            not_activated:
+              reverse: false
