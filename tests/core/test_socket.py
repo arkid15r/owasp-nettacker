@@ -1,8 +1,8 @@
 from unittest.mock import patch
 
-from core.lib.socket import create_tcp_socket, SocketLibrary, SocketEngine
+from core.lib.socket import create_tcp_socket, SocketEngine
 
-from tests.common import TestCase, MockConnectionObject, Mockx509Object
+from tests.common import TestCase
 
 
 class Responses:
@@ -19,16 +19,6 @@ class Responses:
         "weak_cipher_suite": True,
         "ssl_flag": True,
     }
-
-    ssl_certificate_scan = {
-        "self_signed": True,
-        "expired": True,
-        "weak_signing_algo": True,
-        "ssl_flag": True,
-        "expiring_soon": False,
-    }
-
-    ssl_off = {"ssl_flag": False}
 
     none = None
 
@@ -122,30 +112,6 @@ class Substeps:
         },
     }
 
-    ssl_version_scan = {
-        "method": "ssl_version_scan",
-        "response": {
-            "condition_type": "or",
-            "conditions": {
-                "weak_cipher_suite": {"reverse": False},
-                "weak_version": {"reverse": False},
-            },
-        },
-    }
-
-    ssl_certificate_scan = {
-        "method": "ssl_certificate_scan",
-        "response": {
-            "condition_type": "or",
-            "conditions": {
-                "self_signed": {"reverse": False},
-                "expired": {"reverse": False},
-                "weak_signing_algo": {"reverse": False},
-                "expiring_soon": {"reverse": False},
-            },
-        },
-    }
-
 
 class TestSocketMethod(TestCase):
     @patch("socket.socket")
@@ -160,139 +126,6 @@ class TestSocketMethod(TestCase):
         socket_instance.settimeout.assert_called_with(TIMEOUT)
         socket_instance.connect.assert_called_with((HOST, PORT))
         mock_wrap.assert_called_with(socket_instance)
-
-    @patch("core.lib.socket.is_weak_cipher_suite")
-    @patch("core.lib.socket.is_weak_ssl_version")
-    @patch("core.lib.socket.create_tcp_socket")
-    def test_ssl_version_scan_good(self, mock_connection, mock_ssl_check, mock_cipher_check):
-        library = SocketLibrary()
-        HOST = "example.com"
-        PORT = 80
-        TIMEOUT = 60
-
-        mock_connection.return_value = (MockConnectionObject(HOST, "TLSv1.3"), True)
-        mock_ssl_check.return_value = ("TLSv1.3", False)
-        mock_cipher_check.return_value = False
-        self.assertEqual(
-            library.ssl_version_scan(HOST, PORT, TIMEOUT),
-            {
-                "ssl_flag": True,
-                "service": "http",
-                "weak_version": False,
-                "ssl_version": "TLSv1.3",
-                "peer_name": "example.com",
-                "weak_cipher_suite": False,
-            },
-        )
-
-        mock_connection.return_value = (MockConnectionObject(HOST), False)
-        self.assertEqual(
-            library.ssl_version_scan(HOST, PORT, TIMEOUT),
-            {
-                "ssl_flag": False,
-                "service": "http",
-                "peer_name": "example.com",
-            },
-        )
-
-    @patch("core.lib.socket.is_weak_cipher_suite")
-    @patch("core.lib.socket.is_weak_ssl_version")
-    @patch("core.lib.socket.create_tcp_socket")
-    def test_ssl_version_scan_bad(self, mock_connection, mock_ssl_check, mock_cipher_check):
-        library = SocketLibrary()
-        HOST = "example.com"
-        PORT = 80
-        TIMEOUT = 60
-
-        mock_connection.return_value = (MockConnectionObject(HOST, "TLSv1.1"), True)
-        mock_ssl_check.return_value = ("TLSv1.1", True)
-        mock_cipher_check.return_value = True
-        self.assertEqual(
-            library.ssl_version_scan(HOST, PORT, TIMEOUT),
-            {
-                "ssl_flag": True,
-                "service": "http",
-                "weak_version": True,
-                "ssl_version": "TLSv1.1",
-                "weak_cipher_suite": True,
-                "peer_name": "example.com",
-            },
-        )
-
-    @patch("core.lib.socket.create_tcp_socket")
-    @patch("core.lib.socket.crypto.load_certificate")
-    @patch("core.lib.socket.ssl.get_server_certificate")
-    def test_ssl_certificate_scan_good(self, mock_certificate, mock_x509, mock_connection):
-        library = SocketLibrary()
-        HOST = "example.com"
-        PORT = 80
-        TIMEOUT = 60
-
-        mock_connection.return_value = (MockConnectionObject(HOST, "TLSv1.3"), True)
-        mock_x509.return_value = Mockx509Object(
-            is_expired=False,
-            issuer="test_issuer",
-            subject="test_subject",
-            signing_algo="test_algo",
-            expire_date=b"20500619153045Z",
-            activation_date=b"20240619153045Z",
-        )
-        self.assertEqual(
-            library.ssl_certificate_scan(HOST, PORT, TIMEOUT),
-            {
-                "expired": False,
-                "ssl_flag": True,
-                "service": "http",
-                "self_signed": False,
-                "expiring_soon": False,
-                "not_activated": False,
-                "weak_signing_algo": False,
-                "peer_name": "example.com",
-            },
-        )
-
-        mock_connection.return_value = (MockConnectionObject(HOST), False)
-        self.assertEqual(
-            library.ssl_certificate_scan(HOST, PORT, TIMEOUT),
-            {
-                "service": "http",
-                "ssl_flag": False,
-                "peer_name": "example.com",
-            },
-        )
-        mock_certificate.assert_called_with((HOST, PORT))
-
-    @patch("core.lib.socket.create_tcp_socket")
-    @patch("core.lib.socket.crypto.load_certificate")
-    @patch("core.lib.socket.ssl.get_server_certificate")
-    def test_ssl_certificate_scan_bad(self, mock_certificate, mock_x509, mock_connection):
-        library = SocketLibrary()
-        HOST = "example.com"
-        PORT = 80
-        TIMEOUT = 60
-
-        mock_connection.return_value = (MockConnectionObject(HOST, "TLSv1.3"), True)
-        mock_x509.return_value = Mockx509Object(
-            is_expired=True,
-            issuer="test_issuer_subject",
-            subject="test_issuer_subject",
-            signing_algo="sha1",
-            expire_date=b"20500619153045Z",
-            activation_date=b"20500619153045Z",
-        )
-        self.assertEqual(
-            library.ssl_certificate_scan(HOST, PORT, TIMEOUT),
-            {
-                "expired": True,
-                "ssl_flag": True,
-                "service": "http",
-                "self_signed": True,
-                "expiring_soon": False,
-                "not_activated": True,
-                "weak_signing_algo": True,
-                "peer_name": "example.com",
-            },
-        )
 
     def test_response_conditions_matched(self):
         # tests the response conditions matched for different scan methods
@@ -326,35 +159,10 @@ class TestSocketMethod(TestCase):
             Response.tcp_connect_only,
         )
 
-        # ssl_certificate_scan
-        self.assertEqual(
-            engine.response_conditions_matched(
-                Substep.ssl_certificate_scan, Response.ssl_certificate_scan
-            ),
-            {
-                "expired": True,
-                "self_signed": True,
-                "weak_signing_algo": True,
-            },
-        )
-
-        # ssl_version_scan
-        self.assertEqual(
-            engine.response_conditions_matched(
-                Substep.ssl_version_scan, Response.ssl_version_scan
-            ),
-            {
-                "weak_version": True,
-                "weak_cipher_suite": True,
-            },
-        )
-
-        # ssl_* scans with ssl_flag = False
-        self.assertEqual(
-            engine.response_conditions_matched(Substep.ssl_version_scan, Response.ssl_off), []
-        )
-
         # * scans with response None i.e. TCP connection failed(None)
         self.assertEqual(
-            engine.response_conditions_matched(Substep.ssl_version_scan, Response.none), []
+            engine.response_conditions_matched(
+                Substep.tcp_connect_send_and_receive, Response.none
+            ),
+            [],
         )

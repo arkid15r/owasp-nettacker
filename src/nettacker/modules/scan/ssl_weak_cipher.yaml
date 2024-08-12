@@ -1,17 +1,19 @@
 info:
-  name: ssl_certificate_scan
+  name: ssl_version_scan
   author: Captain-T2004
   severity: 6
-  description: check if there are any ssl_certificate vulnerabilities present 
+  description: check if ssl version is unsafe or uses any bad ciphers.
   reference:
+    # Need to change this
     - https://www.beyondsecurity.com/resources/vulnerabilities/ssl-certificate-expiry
   profiles:
     - scan
+    - ssl
 
 payloads:
-  - library: socket
+  - library: ssl
     steps:
-      - method: ssl_certificate_scan
+      - method: ssl_version_and_cipher_scan
         timeout: 3
         host: "{target}"
         ports:
@@ -27,13 +29,11 @@ payloads:
         response:
           condition_type: or
           conditions:
-            self_signed:
-              reverse: false
-            expired:
-              reverse: false
-            weak_signing_algo:
-              reverse: false
-            expiring_soon:
-              reverse: false
-            not_activated:
-              reverse: false
+            grouped_conditions:
+              condition_type: and
+              conditions:
+                weak_cipher_suite:
+                  reverse: false
+                cipher_suite:
+                  reverse: false
+            
